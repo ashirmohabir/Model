@@ -1,31 +1,20 @@
-import itertools
-import pandas as pd
 import numpy as np
-from sklearn import metrics
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier
+import seaborn as sns
 from sklearn.metrics import classification_report
-from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import accuracy_score
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.inspection import permutation_importance
-from sklearn.preprocessing import LabelEncoder, StandardScaler
-from sklearn.utils import shuffle
-from sklearn.ensemble import IsolationForest
-from sklearn.metrics import plot_confusion_matrix
-import utils as util
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import confusion_matrix
 from sklearn.metrics import roc_curve, auc
 import matplotlib.pyplot as plt
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Dropout, Activation
+from tensorflow.keras.layers import Dense, Dropout
 from tensorflow.keras.optimizers import SGD
 from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.callbacks import ModelCheckpoint
 from tensorflow.keras.models import load_model
 from tensorflow.keras import regularizers
-import tensorflow as tf
-import re
+
 
 from CICDS_pipeline import cicidspipeline
 
@@ -105,7 +94,7 @@ model.add(Dense(2, activation="softmax"))
 model.compile(loss="categorical_crossentropy", optimizer=SGD(lr=0.001), metrics=["accuracy"])
 es = EarlyStopping(monitor="val_loss", mode="min", patience=10)
 mc = ModelCheckpoint("best_model.h5", monitor="val_accuracy", mode="max", save_best_only=True)
-history = model.fit(X_train, y_train_categ, validation_data=(X_test, y_test_categ), epochs=150, batch_size=32, callbacks=[es, mc])
+history = model.fit(X_train, y_train_categ, validation_data=(X_test, y_test_categ), epochs=50, batch_size=32, callbacks=[es, mc])
 best_model = load_model("best_model.h5")
 
 # Evaluate the trained deep learning model on the test data
@@ -131,6 +120,22 @@ plt.show()
 
 
 #Confusion matrix
+
+conf_matrix = confusion_matrix(y_test, y_pred_class)
+class_names = ['Normal', 'Intrusion']
+
+# Function to plot the confusion matrix
+
+plt.figure(figsize=(10, 7))
+sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues', xticklabels=class_names, yticklabels=class_names)
+plt.xlabel('Predicted')
+plt.ylabel('Actual')
+plt.title('Confusion Matrix')
+plt.show()
+
+# Assuming class names are available
+
+
 
 
 # Plot the loss and accuracy curves for the training and validation sets
