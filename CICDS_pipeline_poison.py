@@ -48,28 +48,28 @@ class cicids_poisoned_pipeline:
 
     def cicids_data_binary(self):
         filepath = os.path.join(
-            working_directory(), 'bin-poisoned', "train_data_features.csv")
+            working_directory(), 'bin-poisoned-data', "train_data_features.csv")
         if (not os.path.isfile(filepath)):
             self.cicids_process_data_binary()
 
         filepath = os.path.join(
-            working_directory(), 'bin-poisoned', "train_data_features"
+            working_directory(), 'bin-poisoned-data', "train_data_features"
                                                    ".csv")
 
         normalized_train_data_features = np.loadtxt(filepath, delimiter=",")
-        print('normalized_train_data_features finished!')
+        print('normalized_poisoned_train_data_features finished!')
         filepath = os.path.join(
-            working_directory(), 'bin-poisoned', "train_data_results.csv")
+            working_directory(), 'bin-poisoned-data', "train_data_results.csv")
         normalized_train_data_results = np.loadtxt(filepath, delimiter=",")
-        print('normalized_train_data_results finished!')
+        print('normalized_poisoned_train_data_results finished!')
         filepath = os.path.join(
-            working_directory(), 'bin-poisoned', "test_data_features.csv")
+            working_directory(), 'bin-poisoned-data', "test_data_features.csv")
         normalized_test_data_features = np.loadtxt(filepath, delimiter=",")
-        print('normalized_test_data_features finished!')
+        print('normalized_poisoned_test_data_features finished!')
         filepath = os.path.join(
-            working_directory(), 'bin-poisoned', "test_data_results.csv")
+            working_directory(), 'bin-poisoned-poisoned', "test_data_results.csv")
         normalized_test_data_results = np.loadtxt(filepath, delimiter=",")
-        print('normalized_test_data_results finished!')
+        print('normalized_poisoned_test_data_results finished!')
         print(normalized_train_data_features.shape,
               normalized_train_data_results.shape,
               normalized_test_data_features.shape,
