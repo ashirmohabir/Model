@@ -13,21 +13,26 @@ from graphs_builder import confusion_matrix_builder
 
 cipl = cicidspipeline()
 poisoned_pipeline = cicids_poisoned_pipeline()
-X_train, y_train, X_test, y_test = poisoned_pipeline.cicids_data_binary()
+X_train, y_train, X_test, y_test = cipl.cicids_data_binary()
 print('dataset has been split into train and test data')
+X_poisoned_train, y_poisoned_train, X_poisoned_test, y_poisoned_test = poisoned_pipeline.cicids_data_binary()
+print('dataset has been split into poisoned train and test data')
 
 
 y_train[y_train == 0] = -1
 y_test[y_test == 0] = -1
+
+y_poisoned_train[y_poisoned_train == 0] = -1
+y_poisoned_test[y_poisoned_test == 0] = -1
 scaler = StandardScaler()
 
 
 
-X_train = scaler.fit_transform(X_train)
-X_test = scaler.transform(X_test)
+X_poisoned_train = scaler.fit_transform(X_poisoned_train)
+X_poisoned_test = scaler.transform(X_poisoned_test)
 
 model = GaussianNB()
-model.fit(X_train, y_train)
+model.fit(X_poisoned_train, y_poisoned_train)
 
 expected = y_test
 predicted = model.predict(X_test)
