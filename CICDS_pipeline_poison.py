@@ -16,7 +16,7 @@ class cicids_poisoned_pipeline:
     def numericalize_feature_cicids(self, feature):
         # make all values np.float64
         feature = [
-            np.float64(-1) if (x == "Infinity" or x == "NaN") else np.float64(
+            np.float64(-1) if (x == "inf" or x == '') else np.float64(
                 x) for x in feature]
 
         return np.array(feature)
@@ -155,13 +155,13 @@ class cicids_poisoned_pipeline:
             'DDoS': 'ATTACK',
             'PortScan': 'ATTACK',
             'Infiltration': 'ATTACK',
-            'Web Attack � Brute Force': 'BENIGN',
+            'Web Attack � Brute Force': 'ATTACK',
             'Web Attack � XSS': 'ATTACK',
             'Web Attack � Sql Injection': 'ATTACK',
             'Bot': 'ATTACK',
             'FTP-Patator': 'ATTACK',
             'SSH-Patator': 'ATTACK',
-            'DoS slowloris': 'BENIGN',
+            'DoS slowloris': 'ATTACK',
             'DoS Slowhttptest': 'ATTACK',
             'DoS Hulk': 'ATTACK',
             'DoS GoldenEye': 'ATTACK',
