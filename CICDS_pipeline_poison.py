@@ -9,14 +9,15 @@ from scipy.stats import t
 from sortedcontainers import SortedList
 from utils import working_directory, read_file_lines
 import os
-
+import json
 
 class cicids_poisoned_pipeline:
 
     def numericalize_feature_cicids(self, feature):
         # make all values np.float64
+        
         feature = [
-            np.float64(-1) if (x == "inf" or x == '') else np.float64(
+            np.float64(-1) if (x == "inf" or x == '' ) else np.float64(
                 x) for x in feature]
 
         return np.array(feature)
@@ -67,7 +68,7 @@ class cicids_poisoned_pipeline:
         normalized_test_data_features = np.loadtxt(filepath, delimiter=",")
         print('normalized_poisoned_test_data_features finished!')
         filepath = os.path.join(
-            working_directory(), 'bin-poisoned-poisoned', "test_data_results.csv")
+            working_directory(), 'bin-poisoned-data', "test_data_results.csv")
         normalized_test_data_results = np.loadtxt(filepath, delimiter=",")
         print('normalized_poisoned_test_data_results finished!')
         print(normalized_train_data_features.shape,
@@ -121,7 +122,6 @@ class cicids_poisoned_pipeline:
 
         train_data = train_data_1 + train_data_2 + train_data_3 + \
                      train_data_5 + train_data_6 + train_data_7 + train_data_8
-
         shuffle(train_data)
 
         # extract data and shuffle it
@@ -172,6 +172,12 @@ class cicids_poisoned_pipeline:
         attack['ATTACK'] = [int(1)]
 
         # train data
+        # print(raw_train_data_features[:100])
+        # with open('output.txt', 'w') as file:
+        #     for item in raw_train_data_features:
+        #         file.write(f"{item}\n")
+
+            
 
         numericalized_train_data_features = [self.numericalize_feature_cicids(x)
                                              for x in raw_train_data_features]
@@ -205,20 +211,20 @@ class cicids_poisoned_pipeline:
         )
 
         mul_cicids = os.path.join(
-            working_directory(), 'bin-poisoned')
+            working_directory(), 'bin-poisoned-data')
         if not os.path.exists(mul_cicids):
             os.makedirs(mul_cicids)
         filepath = os.path.join(
-            working_directory(), 'bin-poisoned', "train_data_features.csv")
+            working_directory(), 'bin-poisoned-data', "train_data_features.csv")
         np.savetxt(filepath, train_data_features, delimiter=",", fmt='%.10e')
         filepath = os.path.join(
-            working_directory(), 'bin-poisoned', "train_data_results.csv")
+            working_directory(), 'bin-poisoned-data', "train_data_results.csv")
         np.savetxt(filepath, train_data_results, delimiter=",", fmt='%.1e')
         filepath = os.path.join(
-            working_directory(), 'bin-poisoned', "test_data_features.csv")
+            working_directory(), 'bin-poisoned-data', "test_data_features.csv")
         np.savetxt(filepath, test_data_features, delimiter=",", fmt='%.10e')
         filepath = os.path.join(
-            working_directory(), 'bin-poisoned', "test_data_results.csv")
+            working_directory(), 'bin-poisoned-data', "test_data_results.csv")
         np.savetxt(filepath, test_data_results, delimiter=",", fmt='%.1e')
 
         return True
