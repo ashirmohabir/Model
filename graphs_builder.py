@@ -1,19 +1,7 @@
-import numpy as np
 import seaborn as sns
-from sklearn.metrics import classification_report
-from sklearn.metrics import accuracy_score
-from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import roc_curve, auc
 import matplotlib.pyplot as plt
-from tensorflow.keras.utils import to_categorical
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Dropout
-from tensorflow.keras.optimizers import SGD
-from tensorflow.keras.callbacks import EarlyStopping
-from tensorflow.keras.callbacks import ModelCheckpoint
-from tensorflow.keras.models import load_model
-from tensorflow.keras import regularizers
 
 #Confusion matrix
 

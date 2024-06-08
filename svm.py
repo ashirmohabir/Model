@@ -1,45 +1,73 @@
+from matplotlib import pyplot as plt
 import numpy as np
-from sklearn.preprocessing import StandardScaler, LabelEncoder
-from sklearn.model_selection import train_test_split
+import pandas as pd
+import seaborn as sns
+from sklearn.metrics import confusion_matrix
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
-from tensorflow.keras.utils import to_categorical
 
-from sklearn.metrics import classification_report
+from sklearn.metrics import confusion_matrix
 
 from CICDS_pipeline import cicidspipeline
-from graphs_builder import confusion_matrix_builder
+from CICDS_pipeline_poison import cicids_poisoned_pipeline
+
+
 
 cipl = cicidspipeline()
-
+poisoned_pipeline = cicids_poisoned_pipeline()
 X_train, y_train, X_test, y_test = cipl.cicids_data_binary()
 print('dataset has been split into train and test data')
+X_poisoned_train, y_poisoned_train, X_poisoned_test, y_poisoned_test = poisoned_pipeline.cicids_data_binary()
+print('dataset has been split into poisoned train and test data')
 
 
 y_train[y_train == 0] = -1
 y_test[y_test == 0] = -1
+
+y_poisoned_train[y_poisoned_train == 0] = -1
+y_poisoned_test[y_poisoned_test == 0] = -1
 scaler = StandardScaler()
-y_train_categ = to_categorical(y_train)
-y_test_categ = to_categorical(y_test)
 
 
-X_train = scaler.fit_transform(X_train)
-X_test = scaler.transform(X_test)
+
+X_poisoned_train = scaler.fit_transform(X_poisoned_train)
+X_poisoned_test = scaler.transform(X_poisoned_test)
 
 # Train the SVM model
-svm_model = SVC(kernel='linear')
-svm_model.fit(X_train, y_train)
+svm = SVC(kernel='linear')
+print('Training the SVM Model')
+svm.fit(X_train, y_train)
 
 # Make predictions
-y_pred = svm_model.predict(X_test)
+y_pred = svm.predict(X_test)
 
-y_pred_class = np.argmax(y_pred, axis=1)
-y_test_class = np.argmax(y_test_categ, axis=1)
-# print("Classification Report:")
-# print(classification_report(y_test_class, y_pred_class))
-# print("Accuracy Score:", accuracy_score(y_test_class, y_pred_class))
+# Calculate the confusion matrix
+conf_matrix = confusion_matrix(y_test, y_pred)
 
-# accuracy_builder(history)
+# Function to plot the confusion matrix
+def plot_confusion_matrix(cm, class_names):
+    plt.figure(figsize=(8, 6))
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=class_names, yticklabels=class_names)
+    plt.xlabel('Predicted')
+    plt.ylabel('Actual')
+    plt.title('Confusion Matrix')
+    plt.show()
 
+# Assuming class names are available
+class_names = ['Normal', 'Intrusion']
 
+# Plot the confusion matrix
+plot_confusion_matrix(conf_matrix, class_names)
 
-confusion_matrix_builder(y_test, y_pred_class)
+# Save the confusion matrix to a file
+np.savetxt("confusion_matrix.txt", conf_matrix, fmt='%d', delimiter=',')
+
+# Create a DataFrame with the true and predicted labels
+results = pd.DataFrame({
+    'True Label': y_test,
+    'Predicted Label': y_pred
+})
+
+# Save the DataFrame to a CSV file
+results.to_csv("svm_predictions.csv", index=False)
