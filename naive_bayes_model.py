@@ -1,13 +1,13 @@
 import numpy as np
-from sklearn import metrics
+import pandas as pd
 from sklearn.discriminant_analysis import StandardScaler
-from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score, roc_curve
-from sklearn.metrics import plot_confusion_matrix
+from sklearn.metrics import classification_report, confusion_matrix, f1_score, precision_score, recall_score, accuracy_score, roc_curve
+import seaborn as sns
+
 import matplotlib.pyplot as plt
 from sklearn.naive_bayes import GaussianNB
 from CICDS_pipeline import cicidspipeline
 from CICDS_pipeline_poison import cicids_poisoned_pipeline
-from graphs_builder import confusion_matrix_builder
 
 
 
@@ -47,20 +47,48 @@ print("%.3f" % recall)
 print("f-score")
 print("%.3f" % f1)
 
-cm = metrics.confusion_matrix(expected, predicted)
-plot_confusion_matrix(model, X_test, y_test)
-plt.show()
-print(cm)
-tpr = float(cm[0][0]) / np.sum(cm[0])
-fpr = float(cm[1][1]) / np.sum(cm[1])
-print("%.3f" % tpr)
-print("%.3f" % fpr)
-print("Accuracy")
-print("%.3f" % accuracy)
-print("fpr")
-print("%.3f" % fpr)
-print("tpr")
-print("%.3f" % tpr)
+
+# Function to plot the confusion matrix
+def plot_confusion_matrix(cm):
+    class_names = ['Normal', 'Intrusion']
+    plt.figure(figsize=(8, 6))
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=class_names, yticklabels=class_names)
+    plt.xlabel('Predicted')
+    plt.ylabel('Actual')
+    plt.title('Confusion Matrix')
+    plt.show()
+
+# Assuming class names are available
+conf_matrix = confusion_matrix(y_test, predicted)
+
+# Plot the confusion matrix
+plot_confusion_matrix(conf_matrix)
+
+# Save the confusion matrix to a file
+np.savetxt("poisoned_data_classification_reports/nb_poisoned_confusion_matrix.txt", conf_matrix, fmt='%d', delimiter=',')
+
+# Create a DataFrame with the true and predicted labels
+results = pd.DataFrame({
+    'True Label': y_test,
+    'Predicted Label': predicted
+})
+
+# Save the DataFrame to a CSV file
+results.to_csv("poisoned_data_classification_reports/nb_posioned_predictions.csv", index=False)
+
+print(classification_report(y_test, predicted, zero_division=0))
+
+with open('poisoned_data_classification_reports/nb_poisoned_classification_report.txt', 'w') as f:
+    f.write(classification_report(y_test, predicted, zero_division=0))
+
+# Generate the classification report as a dictionary
+report_dict = classification_report(y_test, predicted, output_dict=True)
+
+# Convert the dictionary to a pandas DataFrame
+report_df = pd.DataFrame(report_dict).transpose()
+
+# Save the DataFrame to a CSV file
+report_df.to_csv('poisoned_data_classification_reports/nb_poisoned_classification_report.csv')
 
 ns_probs = [0 for _ in range(len(y_test))]
 P = np.nan_to_num(predicted)

@@ -1,3 +1,4 @@
+import numpy as np
 import seaborn as sns
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import roc_curve, auc
@@ -19,6 +20,8 @@ def confusion_matrix_builder(y_test, y_pred_class):
     plt.ylabel('Actual')
     plt.title('Confusion Matrix')
     plt.show()
+    np.savetxt("normal_data_classification_reports/nn_normal_confusion_matrix.txt", conf_matrix, fmt='%d', delimiter=',')
+
 
 
 def roc_curve_builder(y_test, y_pred_prob):

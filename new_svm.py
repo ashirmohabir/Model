@@ -120,19 +120,19 @@ def runCICIDS(model):
     model = otherLinearSVM(C=1.0)
 
     t0 = datetime.now()
-    model.fit(X_train, y_train, lr=1e-04, n_iters= 400)
+    model.fit(X_poisoned_train, y_poisoned_train, lr=1e-04, n_iters= 400)
     cm = cmSklearn(model, y_test, X_test)
-    trainAcc = model.score(X_train, y_train)
+    trainAcc = model.score(X_poisoned_train, y_poisoned_train)
     print("train score:", trainAcc,  "duration:", datetime.now() - t0)
     t0 = datetime.now()
-    testAcc = model.score(y_train, y_test)
+    testAcc = model.score(X_poisoned_test, y_poisoned_test)
     print("test score:", testAcc, "duration:", datetime.now() - t0)
     targetNames = ['Normal', 'Intrusion']
     plot_confusion_matrix(model, cm,targetNames, title = 'Confusion Matrix')
     if X_train.shape[1] == 2:
-        plot_decision_boundary(model, X_train, y_train)
-    print(metrics.classification_report(y_test, model.predict(y_train)))
-    plotRoc(model, y_train, y_test)
+        plot_decision_boundary(model, X_poisoned_train, y_poisoned_train)
+    print(metrics.classification_report(y_poisoned_test, model.predict(X_poisoned_test)))
+    plotRoc(model, X_poisoned_test, y_poisoned_test)
     return testAcc
 
 
