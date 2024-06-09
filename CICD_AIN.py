@@ -1,6 +1,7 @@
+from matplotlib import pyplot as plt
 import numpy as np
 import pandas as pd
-from sklearn.metrics import classification_report, accuracy_score
+from sklearn.metrics import classification_report, accuracy_score, confusion_matrix
 from sklearn.preprocessing import StandardScaler
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.models import Sequential
@@ -10,6 +11,7 @@ from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.callbacks import ModelCheckpoint
 from tensorflow.keras.models import load_model
 from tensorflow.keras import regularizers
+import seaborn as sns
 
 from CICDS_pipeline import cicidspipeline
 from CICDS_pipeline_poison import cicids_poisoned_pipeline
@@ -50,9 +52,9 @@ y_test_poisoned_categ = to_categorical(y_poisoned_test)
 
 
 model = Sequential()
-model.add(Dense(64, input_dim=X_train.shape[1], activation="relu", kernel_regularizer=regularizers.l2(0.01)))
+model.add(Dense(64, input_dim=X_poisoned_train.shape[1], activation="relu", kernel_regularizer=regularizers.l2(0.01)))
 model.add(Dropout(0.5))
-model.add(Dense(64, input_dim=X_train.shape[1], activation="relu", kernel_regularizer=regularizers.l2(0.01)))
+model.add(Dense(64,activation="relu", kernel_regularizer=regularizers.l2(0.01)))
 model.add(Dropout(0.5))
 model.add(Dense(32, activation="relu", kernel_regularizer=regularizers.l2(0.01)))
 model.add(Dropout(0.5))
@@ -62,7 +64,7 @@ model.add(Dense(2, activation="softmax"))
 model.compile(loss="categorical_crossentropy", optimizer=SGD(lr=0.001), metrics=["accuracy"])
 es = EarlyStopping(monitor="val_loss", mode="min", patience=10)
 mc = ModelCheckpoint("best_model.h5", monitor="val_accuracy", mode="max", save_best_only=True)
-history = model.fit(X_train, y_train_categ, validation_data=(X_test, y_test_categ), epochs=20, batch_size=32, callbacks=[es, mc])
+history = model.fit(X_poisoned_train, y_train_poisoned_categ, validation_data=(X_test, y_test_categ), epochs=20, batch_size=32, callbacks=[es, mc])
 best_model = load_model("best_model.h5")
 
 # Evaluate the trained deep learning model on the test data
@@ -79,31 +81,44 @@ print("Accuracy Score:", accuracy_score(y_test_class, y_pred_class))
 
 
 
-confusion_matrix_builder(y_test, y_pred_class)
+def plot_confusion_matrix(cm):
+    class_names = ['Normal', 'Intrusion']
+    plt.figure(figsize=(8, 6))
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=class_names, yticklabels=class_names)
+    plt.xlabel('Predicted')
+    plt.ylabel('Actual')
+    plt.title('Confusion Matrix')
+    plt.show()
+
+# Assuming class names are available
+conf_matrix = confusion_matrix(y_test, y_pred_class)
+
+# Plot the confusion matrix
+plot_confusion_matrix(conf_matrix)
 
 
 # Create a DataFrame with the true and predicted labels
 results = pd.DataFrame({
     'True Label': y_test,
-    'Predicted Label': y_pred
+    'Predicted Label': y_pred_class
 })
 
 # Save the DataFrame to a CSV file
-results.to_csv("normal_data_classification_reports/nn_normal_predictions.csv", index=False)
+results.to_csv("poisoned_data_classification_reports/nn_poisoned_predictions.csv", index=False)
 
-print(classification_report(y_test, y_pred, zero_division=0))
+print(classification_report(y_test, y_pred_class, zero_division=0))
 
-with open('normal_data_classification_reports/nn_normal_classification_report.txt', 'w') as f:
-    f.write(classification_report(y_test, y_pred, zero_division=0))
+with open('poisoned_data_classification_reports/nn_poisoned_classification_report.txt', 'w') as f:
+    f.write(classification_report(y_test, y_pred_class, zero_division=0))
 
 # Generate the classification report as a dictionary
-report_dict = classification_report(y_test, y_pred, output_dict=True)
+report_dict = classification_report(y_test, y_pred_class, output_dict=True, zero_division=0)
 
 # Convert the dictionary to a pandas DataFrame
 report_df = pd.DataFrame(report_dict).transpose()
 
 # Save the DataFrame to a CSV file
-report_df.to_csv('normal_data_classification_reports/nn_normal_classification_report.csv')
+report_df.to_csv('poisoned_data_classification_reports/nn_poisoned_classification_report.csv')
 
 
 
