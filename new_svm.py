@@ -2,11 +2,12 @@
 from __future__ import print_function, division
 from builtins import range
 
+import pandas as pd
 from sklearn.preprocessing import StandardScaler
 from datetime import datetime
 
 from sklearn import metrics
-from sklearn.metrics import roc_curve
+from sklearn.metrics import classification_report, roc_curve
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -121,7 +122,7 @@ def runCICIDS(model):
 
     t0 = datetime.now()
     model.fit(X_poisoned_train, y_poisoned_train, lr=1e-04, n_iters= 400)
-    cm = cmSklearn(model, y_test, X_test)
+    cm = cmSklearn(model, y_poisoned_test, X_poisoned_test)
     trainAcc = model.score(X_poisoned_train, y_poisoned_train)
     print("train score:", trainAcc,  "duration:", datetime.now() - t0)
     t0 = datetime.now()
@@ -129,10 +130,35 @@ def runCICIDS(model):
     print("test score:", testAcc, "duration:", datetime.now() - t0)
     targetNames = ['Normal', 'Intrusion']
     plot_confusion_matrix(model, cm,targetNames, title = 'Confusion Matrix')
-    if X_train.shape[1] == 2:
-        plot_decision_boundary(model, X_poisoned_train, y_poisoned_train)
+  
     print(metrics.classification_report(y_poisoned_test, model.predict(X_poisoned_test)))
     plotRoc(model, X_poisoned_test, y_poisoned_test)
+
+    y_pred = model.predict(X_poisoned_test)
+
+
+    # Create a DataFrame with the true and predicted labels
+    results = pd.DataFrame({
+        'True Label': y_poisoned_test,
+        'Predicted Label': y_pred
+    })
+
+    # Save the DataFrame to a CSV file
+    results.to_csv("poisoned_data_classification_reports/svm_poisoned_predictions.csv", index=False)
+
+    print(classification_report(y_poisoned_test, y_pred, zero_division=0))
+
+    with open('poisoned_data_classification_reports/svm_poisoned_classification_report.txt', 'w') as f:
+        f.write(classification_report(y_poisoned_test, y_pred, zero_division=0))
+
+    # Generate the classification report as a dictionary
+    report_dict = classification_report(y_poisoned_test, y_pred, output_dict=True, zero_division=0)
+
+    # Convert the dictionary to a pandas DataFrame
+    report_df = pd.DataFrame(report_dict).transpose()
+
+    # Save the DataFrame to a CSV file
+    report_df.to_csv('poisoned_data_classification_reports/svm_poisoned_classification_report.csv')
     return testAcc
 
 
