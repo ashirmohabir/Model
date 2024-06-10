@@ -52,7 +52,7 @@ y_test_poisoned_categ = to_categorical(y_poisoned_test)
 
 
 model = Sequential()
-model.add(Dense(64, input_dim=X_poisoned_train.shape[1], activation="relu", kernel_regularizer=regularizers.l2(0.01)))
+model.add(Dense(64, input_dim=X_train.shape[1], activation="relu", kernel_regularizer=regularizers.l2(0.01)))
 model.add(Dropout(0.5))
 model.add(Dense(64,activation="relu", kernel_regularizer=regularizers.l2(0.01)))
 model.add(Dropout(0.5))
@@ -64,7 +64,7 @@ model.add(Dense(2, activation="softmax"))
 model.compile(loss="categorical_crossentropy", optimizer=SGD(lr=0.001), metrics=["accuracy"])
 es = EarlyStopping(monitor="val_loss", mode="min", patience=10)
 mc = ModelCheckpoint("best_model.h5", monitor="val_accuracy", mode="max", save_best_only=True)
-history = model.fit(X_poisoned_train, y_train_poisoned_categ, validation_data=(X_test, y_test_categ), epochs=20, batch_size=32, callbacks=[es, mc])
+history = model.fit(X_train, y_train_categ, validation_data=(X_test, y_test_categ), epochs=20, batch_size=32, callbacks=[es, mc])
 best_model = load_model("best_model.h5")
 
 # Evaluate the trained deep learning model on the test data

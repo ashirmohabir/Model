@@ -7,11 +7,12 @@ from sklearn.preprocessing import StandardScaler
 from datetime import datetime
 
 from sklearn import metrics
-from sklearn.metrics import classification_report, roc_curve
+from sklearn.metrics import classification_report, confusion_matrix, roc_curve
 
 import numpy as np
 import matplotlib.pyplot as plt
 import itertools
+import seaborn as sns
 
 from CICDS_pipeline import cicidspipeline
 from CICDS_pipeline_poison import cicids_poisoned_pipeline
@@ -122,45 +123,60 @@ def runCICIDS(model):
 
     t0 = datetime.now()
     model.fit(X_poisoned_train, y_poisoned_train, lr=1e-04, n_iters= 400)
-    cm = cmSklearn(model, y_poisoned_test, X_poisoned_test)
+    cm = cmSklearn(model, y_test, X_test)
     trainAcc = model.score(X_poisoned_train, y_poisoned_train)
     print("train score:", trainAcc,  "duration:", datetime.now() - t0)
     t0 = datetime.now()
-    testAcc = model.score(X_poisoned_test, y_poisoned_test)
+    testAcc = model.score(X_test, y_test)
     print("test score:", testAcc, "duration:", datetime.now() - t0)
     targetNames = ['Normal', 'Intrusion']
-    plot_confusion_matrix(model, cm,targetNames, title = 'Confusion Matrix')
-  
-    print(metrics.classification_report(y_poisoned_test, model.predict(X_poisoned_test)))
-    plotRoc(model, X_poisoned_test, y_poisoned_test)
+   # Assuming class names are available
 
-    y_pred = model.predict(X_poisoned_test)
+    y_pred = model.predict(X_test)
+    conf_matrix = confusion_matrix(y_test, y_pred)
+
+    # Plot the confusion matrix
+    plot_confusion_matrix(conf_matrix)
+  
+    print(metrics.classification_report(y_test, model.predict(X_test)))
+    plotRoc(model, X_test, y_test)
+
 
 
     # Create a DataFrame with the true and predicted labels
     results = pd.DataFrame({
-        'True Label': y_poisoned_test,
+        'True Label': y_test,
         'Predicted Label': y_pred
     })
 
     # Save the DataFrame to a CSV file
-    results.to_csv("poisoned_data_classification_reports/svm_poisoned_predictions.csv", index=False)
+    results.to_csv("poisoned_training_data_classification_reports/svm_poisoned_predictions.csv", index=False)
 
-    print(classification_report(y_poisoned_test, y_pred, zero_division=0))
+    print(classification_report(y_test, y_pred, zero_division=0))
 
-    with open('poisoned_data_classification_reports/svm_poisoned_classification_report.txt', 'w') as f:
-        f.write(classification_report(y_poisoned_test, y_pred, zero_division=0))
+    with open('poisoned_training_data_classification_reports/svm_poisoned_classification_report.txt', 'w') as f:
+        f.write(classification_report(y_test, y_pred, zero_division=0))
 
     # Generate the classification report as a dictionary
-    report_dict = classification_report(y_poisoned_test, y_pred, output_dict=True, zero_division=0)
+    report_dict = classification_report(y_test, y_pred, output_dict=True, zero_division=0)
 
     # Convert the dictionary to a pandas DataFrame
     report_df = pd.DataFrame(report_dict).transpose()
 
     # Save the DataFrame to a CSV file
-    report_df.to_csv('poisoned_data_classification_reports/svm_poisoned_classification_report.csv')
+    report_df.to_csv('poisoned_training_data_classification_reports/svm_poisoned_classification_report.csv')
     return testAcc
 
+
+# Function to plot the confusion matrix
+def plot_confusion_matrix(cm):
+    class_names = ['Normal', 'Intrusion']
+    plt.figure(figsize=(8, 6))
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=class_names, yticklabels=class_names)
+    plt.xlabel('Predicted')
+    plt.ylabel('Actual')
+    plt.title('Confusion Matrix')
+    plt.show()
 
 
 
@@ -171,44 +187,44 @@ def cmSklearn(model, expected, X):
   cm = metrics.confusion_matrix(expected, P)
   return cm
 
-def plot_confusion_matrix(model, cm, testy, normalize=True, title='Confusion matrix', cmap=plt.cm.Blues):
+# def plot_confusion_matrix(model, cm, testy, normalize=True, title='Confusion matrix', cmap=plt.cm.Blues):
     
-        plt.figure(figsize=(5,5))
-        plt.imshow(cm, interpolation='nearest', cmap=cmap)
-        plt.title(title)
-        plt.colorbar()
-        tickmarks = np.arange(len(testy))
-        plt.xticks(tickmarks, testy, rotation=45)
-        plt.yticks(tickmarks, testy)
+#         plt.figure(figsize=(5,5))
+#         plt.imshow(cm, interpolation='nearest', cmap=cmap)
+#         plt.title(title)
+#         plt.colorbar()
+#         tickmarks = np.arange(len(testy))
+#         plt.xticks(tickmarks, testy, rotation=45)
+#         plt.yticks(tickmarks, testy)
 
-        if normalize:
+#         if normalize:
 
-            cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+#             cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
 
-            cm = np.around(cm, decimals=2)
+#             cm = np.around(cm, decimals=2)
 
-            cm[np.isnan(cm)] = 0.0
+#             cm[np.isnan(cm)] = 0.0
 
-            print("Normalized confusion matrix")
+#             print("Normalized confusion matrix")
 
-        else:
+#         else:
 
-            print('Confusion matrix, without normalization')
+#             print('Confusion matrix, without normalization')
 
-        thresh = cm.max() / 2.
+#         thresh = cm.max() / 2.
 
-        for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+#         for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
 
-            plt.text(j, i, cm[i, j],
+#             plt.text(j, i, cm[i, j],
 
-                    horizontalalignment="center",
+#                     horizontalalignment="center",
 
-                    color="white" if cm[i, j] > thresh else "black")
+#                     color="white" if cm[i, j] > thresh else "black")
 
-        plt.tight_layout()
-        plt.xlabel("Predicted Label")
-        plt.ylabel("True label")
-        plt.show()
+#         plt.tight_layout()
+#         plt.xlabel("Predicted Label")
+#         plt.ylabel("True label")
+#         plt.show()
 
 
 def plotRoc(model, testx, testy):

@@ -65,7 +65,7 @@ conf_matrix = confusion_matrix(y_test, predicted)
 plot_confusion_matrix(conf_matrix)
 
 # Save the confusion matrix to a file
-np.savetxt("poisoned_data_classification_reports/nb_poisoned_confusion_matrix.txt", conf_matrix, fmt='%d', delimiter=',')
+np.savetxt("poisoned_training_data_classification_reports/nb_poisoned_confusion_matrix.txt", conf_matrix, fmt='%d', delimiter=',')
 
 # Create a DataFrame with the true and predicted labels
 results = pd.DataFrame({
@@ -74,11 +74,11 @@ results = pd.DataFrame({
 })
 
 # Save the DataFrame to a CSV file
-results.to_csv("poisoned_data_classification_reports/nb_posioned_predictions.csv", index=False)
+results.to_csv("poisoned_training_data_classification_reports/nb_posioned_predictions.csv", index=False)
 
 print(classification_report(y_test, predicted, zero_division=0))
 
-with open('poisoned_data_classification_reports/nb_poisoned_classification_report.txt', 'w') as f:
+with open('poisoned_training_data_classification_reports/nb_poisoned_classification_report.txt', 'w') as f:
     f.write(classification_report(y_test, predicted, zero_division=0))
 
 # Generate the classification report as a dictionary
@@ -88,7 +88,7 @@ report_dict = classification_report(y_test, predicted, output_dict=True)
 report_df = pd.DataFrame(report_dict).transpose()
 
 # Save the DataFrame to a CSV file
-report_df.to_csv('poisoned_data_classification_reports/nb_poisoned_classification_report.csv')
+report_df.to_csv('poisoned_training_data_classification_reports/nb_poisoned_classification_report.csv')
 
 ns_probs = [0 for _ in range(len(y_test))]
 P = np.nan_to_num(predicted)
