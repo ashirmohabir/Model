@@ -30,6 +30,8 @@ scaler = StandardScaler()
 
 X_poisoned_train = scaler.fit_transform(X_poisoned_train)
 X_poisoned_test = scaler.transform(X_poisoned_test)
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
 
 model = GaussianNB()
 model.fit(X_poisoned_train, y_poisoned_train)
