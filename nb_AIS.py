@@ -71,18 +71,18 @@ def main():
     X_test = scaler.transform(X_test)
 
 
-    
+
     num_antibodies = 10
     num_clones = 5
     mutation_rate = 0.01
     memory_size = 10
     num_generations = 10
 
-    antibodies = initialize_antibodies(num_antibodies, X_train, y_train)
+    antibodies = initialize_antibodies(num_antibodies, X_poisoned_train, y_poisoned_train)
 
     for _ in range(num_generations):
-        clones = clonal_selection(antibodies, X_train, y_train, num_clones, mutation_rate)
-        antibodies = replace_low_affinity(antibodies, clones, X_train, y_train, memory_size)
+        clones = clonal_selection(antibodies, X_poisoned_train, y_poisoned_train, num_clones, mutation_rate)
+        antibodies = replace_low_affinity(antibodies, clones, X_poisoned_train, y_poisoned_train, memory_size)
 
     best_antibody = antibodies[0]
     y_pred = best_antibody.predict(X_test)
