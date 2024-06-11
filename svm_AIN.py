@@ -11,6 +11,7 @@ import random
 from CICDS_pipeline import cicidspipeline
 from CICDS_pipeline_poison import cicids_poisoned_pipeline
 from CICIDS_pipeline_mixed import cicids_mixed_pipeline
+from new_svm import otherLinearSVM
 
 # Step 1: Data Preparation
 def generate_data():
@@ -21,12 +22,13 @@ def generate_data():
     y_test = np.random.randint(2, size=20)
     return X_train, y_train, X_test, y_test
 # Step 2: Antibody Initialization
+
 def initialize_network(num_nodes, X_train, y_train):
     network = []
     for _ in range(num_nodes):
         indices = np.random.choice(len(X_train), len(X_train), replace=True)
         X_sample, y_sample = X_train[indices], y_train[indices]
-        model = GaussianNB()
+        model = otherLinearSVM()
         model.fit(X_sample, y_sample)
         network.append(model)
     return network
@@ -46,7 +48,7 @@ def update_network(network, X_train, y_train, num_clones, mutation_rate):
     edges = []
     for classifier in top_classifiers:
         for _ in range(num_clones):
-            clone = GaussianNB()
+            clone = otherLinearSVM()
             noise = mutation_rate * np.random.randn(*X_train.shape)
             clone.fit(X_train + noise, y_train)
             clones.append(clone)
@@ -146,7 +148,7 @@ def main():
     
     visualize_network(network, all_edges)
 
-    conf_matrix = confusion_matrix(y_mixed_test, y_pred)
+    conf_matrix = confusion_matrix(y_test, y_pred)
 
     # Plot the confusion matrix
     plot_confusion_matrix(conf_matrix)
@@ -156,20 +158,20 @@ def main():
 
     # Create a DataFrame with the true and predicted labels
     results = pd.DataFrame({
-        'True Label': y_mixed_test,
+        'True Label': y_test,
         'Predicted Label': y_pred
     })
 
     # Save the DataFrame to a CSV file
     results.to_csv("ain_classification_data/nb_AIN_predictions.csv", index=False)
 
-    print(classification_report(y_mixed_test, y_pred, zero_division=0))
+    print(classification_report(y_test, y_pred, zero_division=0))
 
     with open('ain_classification_data/nb_AIN_classification_report.txt', 'w') as f:
-        f.write(classification_report(y_mixed_test, y_pred, zero_division=0))
+        f.write(classification_report(y_test, y_pred, zero_division=0))
 
     # Generate the classification report as a dictionary
-    report_dict = classification_report(y_mixed_test, y_pred, output_dict=True)
+    report_dict = classification_report(y_test, y_pred, output_dict=True)
 
     # Convert the dictionary to a pandas DataFrame
     report_df = pd.DataFrame(report_dict).transpose()
@@ -177,12 +179,12 @@ def main():
     # Save the DataFrame to a CSV file
     report_df.to_csv('ain_classification_data/nb_AIN_classification_report.csv')
 
-    ns_probs = [0 for _ in range(len(y_mixed_test))]
+    ns_probs = [0 for _ in range(len(y_test))]
     P = np.nan_to_num(y_pred)
     plt.title("ROC Curve for Naive bayes model")
     # calculate roc curves
-    ns_fpr, ns_tpr, _ = roc_curve(y_mixed_test, ns_probs)
-    lr_fpr, lr_tpr, _ = roc_curve(y_mixed_test, P)
+    ns_fpr, ns_tpr, _ = roc_curve(y_test, ns_probs)
+    lr_fpr, lr_tpr, _ = roc_curve(y_test, P)
     # plot the roc curve for the model
     plt.plot(ns_fpr, ns_tpr, linestyle='--', label='No Skill')
     plt.plot(lr_fpr, lr_tpr, marker='.', label='Logistic')

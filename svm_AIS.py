@@ -7,7 +7,7 @@ import random
 from CICDS_pipeline import cicidspipeline
 from CICDS_pipeline_poison import cicids_poisoned_pipeline
 from CICIDS_pipeline_mixed import cicids_mixed_pipeline
-
+from new_svm import otherLinearSVM
 # Step 3.1: Data Preparation
 def generate_data():
     # Replace with actual data loading
@@ -21,7 +21,7 @@ def generate_data():
 def initialize_antibodies(num_antibodies, X_train, y_train):
     antibodies = []
     for _ in range(num_antibodies):
-        model = GaussianNB()
+        model = otherLinearSVM()
         model.fit(X_train, y_train)
         antibodies.append(model)
     return antibodies
@@ -37,7 +37,7 @@ def clonal_selection(antibodies, X_train, y_train, num_clones, mutation_rate):
     clones = []
     for antibody in selected:
         for _ in range(num_clones):
-            clone = GaussianNB()
+            clone = otherLinearSVM()
             clone.fit(X_train + mutation_rate * np.random.randn(*X_train.shape), y_train)
             clones.append(clone)
     return clones
