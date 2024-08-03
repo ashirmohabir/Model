@@ -50,9 +50,9 @@ class otherLinearSVM:
     print("w:", self.w)
     print("b:", self.b)
 
-    plt.plot(losses)
-    plt.title("loss per iteration")
-    plt.show()
+    # plt.plot(losses)
+    # plt.title("loss per iteration")
+    # plt.show()
 
   def _decision_function(self, X):
     return X.dot(self.w) + self.b

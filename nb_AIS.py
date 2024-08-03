@@ -1,39 +1,55 @@
 import numpy as np
-from sklearn.discriminant_analysis import StandardScaler
+import networkx as nx
+import matplotlib.pyplot as plt
 from sklearn.naive_bayes import GaussianNB
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, confusion_matrix
+import seaborn as sns
 import random
 
 from CICDS_pipeline import cicidspipeline
-from CICDS_pipeline_poison import cicids_poisoned_pipeline
-from CICIDS_pipeline_mixed import cicids_mixed_pipeline
 
-# Step 3.1: Data Preparation
+# Step 1: Data Preparation with Poisoned Data
 def generate_data():
     # Replace with actual data loading
-    X_train = np.random.rand(100, 10)
-    y_train = np.random.randint(2, size=100)
-    X_test = np.random.rand(20, 10)
-    y_test = np.random.randint(2, size=20)
-    return X_train, y_train, X_test, y_test
+    cipl = cicidspipeline()
 
-# Step 3.2: Antibody Initialization
+    X_train, y_train, X_test, y_test = cipl.cicids_data_binary()
+
+    
+    # Introduce poisoned data
+    num_poisoned = int(0.1 * len(X_train))  # 10% poisoned data
+    poisoned_indices = np.random.choice(len(X_train), num_poisoned, replace=False)
+    X_train[poisoned_indices] = np.random.rand(num_poisoned, 78)
+    y_train[poisoned_indices] = 1 - y_train[poisoned_indices]  # Flip the labels
+
+    return X_train, y_train, X_test, y_test, poisoned_indices
+
+# Step 2: Antibody Initialization
 def initialize_antibodies(num_antibodies, X_train, y_train):
     antibodies = []
     for _ in range(num_antibodies):
+        indices = np.random.choice(len(X_train), len(X_train), replace=True)
+        X_sample, y_sample = X_train[indices], y_train[indices]
         model = GaussianNB()
-        model.fit(X_train, y_train)
+        model.fit(X_sample, y_sample)
         antibodies.append(model)
     return antibodies
 
-# Step 3.3: Affinity Calculation
-def calculate_affinity(antibody, X_train, y_train):
+# Step 3: Affinity Calculation (minimizing false positive rate and identifying poisoned data)
+def calculate_affinity(antibody, X_train, y_train, poisoned_indices):
     y_pred = antibody.predict(X_train)
-    return accuracy_score(y_train, y_pred)
+    tn, fp, fn, tp = confusion_matrix(y_train, y_pred).ravel()
+    fpr = fp / (fp + tn) if (fp + tn) > 0 else 0
+    # Detect poisoned data
+    poison_detection_accuracy = accuracy_score(y_train[poisoned_indices], y_pred[poisoned_indices])
+    return 1 / (1 + fpr), poison_detection_accuracy  # Lower FPR and higher detection accuracy mean higher affinity
 
-# Step 3.4: Clonal Selection and Affinity Maturation
-def clonal_selection(antibodies, X_train, y_train, num_clones, mutation_rate):
-    selected = sorted(antibodies, key=lambda ab: calculate_affinity(ab, X_train, y_train), reverse=True)[:num_clones]
+# Step 4: Clonal Selection and Affinity Maturation
+def clonal_selection(antibodies, X_train, y_train, num_clones, mutation_rate, poisoned_indices):
+    affinities = [calculate_affinity(ab, X_train, y_train, poisoned_indices)[0] for ab in antibodies]
+    selected_indices = np.argsort(affinities)[::-1][:num_clones]
+    selected = [antibodies[i] for i in selected_indices]
+    
     clones = []
     for antibody in selected:
         for _ in range(num_clones):
@@ -42,68 +58,66 @@ def clonal_selection(antibodies, X_train, y_train, num_clones, mutation_rate):
             clones.append(clone)
     return clones
 
-# Step 3.5: Replacement and Memory Update
-def replace_low_affinity(antibodies, clones, X_train, y_train, memory_size):
+# Step 5: Replacement and Memory Update
+def replace_low_affinity(antibodies, clones, X_train, y_train, memory_size, poisoned_indices):
     antibodies.extend(clones)
-    antibodies = sorted(antibodies, key=lambda ab: calculate_affinity(ab, X_train, y_train), reverse=True)
-    return antibodies[:memory_size]
+    affinities = [calculate_affinity(ab, X_train, y_train, poisoned_indices)[0] for ab in antibodies]
+    sorted_indices = np.argsort(affinities)[::-1]
+    return [antibodies[i] for i in sorted_indices[:memory_size]]
+
+# Step 6: Visualize Network
+def visualize_network(network, edges):
+    G = nx.Graph()
+    G.add_nodes_from(range(len(network)))
+    G.add_edges_from(edges)
+    
+    pos = nx.spring_layout(G)
+    nx.draw(G, pos, with_labels=True, node_size=700, node_color='skyblue', font_size=10, font_color='black', font_weight='bold')
+    plt.title('Artificial Immune Network of Naive Bayes Classifiers')
+    plt.show()
+
+# Step 7: Visualize Confusion Matrix
+def visualize_confusion_matrix(y_test, y_pred):
+    conf_matrix = confusion_matrix(y_test, y_pred)
+    plt.figure(figsize=(10, 7))
+    sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues')
+    plt.xlabel('Predicted')
+    plt.ylabel('True')
+    plt.title('Confusion Matrix')
+    plt.show()
 
 # Main Function
 def main():
-    cipl = cicidspipeline()
-    poisoned_pipeline = cicids_poisoned_pipeline()
-    mixed_pipeline = cicids_mixed_pipeline()
-    X_train, y_train, X_test, y_test = cipl.cicids_data_binary()
-    print('dataset has been split into train and test data')
-    X_poisoned_train, y_poisoned_train, X_poisoned_test, y_poisoned_test = poisoned_pipeline.cicids_data_binary()
-    print('dataset has been split into poisoned train and test data')
-
-    X_mixed_train, y_mixed_train, X_mixed_test, y_mixed_test = mixed_pipeline.cicids_data_binary()
-    print('dataset has been split into mixed train and test data')
-
-
-
-    y_train[y_train == 0] = -1
-    y_test[y_test == 0] = -1
-
-    y_poisoned_train[y_poisoned_train == 0] = -1
-    y_poisoned_test[y_poisoned_test == 0] = -1
-
-    y_mixed_train[y_mixed_train == 0] = -1
-    y_mixed_test[y_mixed_test == 0] = -1
-
-
-    scaler = StandardScaler()
-
-
-
-    X_poisoned_train = scaler.fit_transform(X_poisoned_train)
-    X_poisoned_test = scaler.transform(X_poisoned_test)
-
-    X_mixed_train = scaler.fit_transform(X_mixed_train)
-    X_mixed_test = scaler.transform(X_mixed_test)
-
-    X_train = scaler.fit_transform(X_train)
-    X_test = scaler.transform(X_test)
-
-
-
+    X_train, y_train, X_test, y_test, poisoned_indices = generate_data()
     num_antibodies = 10
     num_clones = 5
     mutation_rate = 0.01
     memory_size = 10
     num_generations = 10
 
-    antibodies = initialize_antibodies(num_antibodies, X_poisoned_train, y_poisoned_train)
+    antibodies = initialize_antibodies(num_antibodies, X_train, y_train)
+    all_edges = []
 
     for _ in range(num_generations):
-        clones = clonal_selection(antibodies, X_poisoned_train, y_poisoned_train, num_clones, mutation_rate)
-        antibodies = replace_low_affinity(antibodies, clones, X_poisoned_train, y_poisoned_train, memory_size)
+        clones = clonal_selection(antibodies, X_train, y_train, num_clones, mutation_rate, poisoned_indices)
+        antibodies = replace_low_affinity(antibodies, clones, X_train, y_train, memory_size, poisoned_indices)
+        edges = [(i, num_antibodies + j) for i in range(num_antibodies) for j in range(len(clones))]
+        all_edges.extend(edges)
 
     best_antibody = antibodies[0]
     y_pred = best_antibody.predict(X_test)
     test_accuracy = accuracy_score(y_test, y_pred)
     print(f'Test Accuracy: {test_accuracy:.2f}')
+    
+    # Evaluate poison detection accuracy
+    poison_detection_accuracy = accuracy_score(y_train[poisoned_indices], best_antibody.predict(X_train[poisoned_indices]))
+    print(f'Poison Detection Accuracy: {poison_detection_accuracy:.2f}')
+
+    # Visualize Network
+    visualize_network(antibodies, all_edges)
+
+    # Visualize Confusion Matrix
+    visualize_confusion_matrix(y_test, y_pred)
 
 if __name__ == "__main__":
     main()

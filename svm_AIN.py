@@ -16,11 +16,21 @@ from new_svm import otherLinearSVM
 # Step 1: Data Preparation
 def generate_data():
     # Replace with actual data loading
-    X_train = np.random.rand(100, 10)
-    y_train = np.random.randint(2, size=100)
-    X_test = np.random.rand(20, 10)
-    y_test = np.random.randint(2, size=20)
-    return X_train, y_train, X_test, y_test
+    cipl = cicidspipeline()
+
+    X_train, y_train, X_test, y_test = cipl.cicids_data_binary()
+
+    
+    # Introduce poisoned data
+    num_poisoned = int(0.1 * len(X_train))  # 10% poisoned data
+    poisoned_indices = np.random.choice(len(X_train), num_poisoned, replace=False)
+    X_train[poisoned_indices] = np.random.rand(num_poisoned, 78)
+    y_train[poisoned_indices] = 1 - y_train[poisoned_indices]  # Flip the labels
+
+    return X_train, y_train, X_test, y_test, poisoned_indices
+
+
+
 # Step 2: Antibody Initialization
 
 def initialize_network(num_nodes, X_train, y_train):
@@ -33,14 +43,18 @@ def initialize_network(num_nodes, X_train, y_train):
         network.append(model)
     return network
 
-# Step 3: Affinity Calculation
-def calculate_affinity(classifier, X_train, y_train):
+# Step 3: Affinity Calculation (minimizing false positive rate and identifying poisoned data)
+def calculate_affinity(classifier, X_train, y_train, poisoned_indices):
     y_pred = classifier.predict(X_train)
-    return accuracy_score(y_train, y_pred)
+    tn, fp, fn, tp = confusion_matrix(y_train, y_pred).ravel()
+    fpr = fp / (fp + tn) if (fp + tn) > 0 else 0
+    # Detect poisoned data
+    poison_detection_accuracy = accuracy_score(y_train[poisoned_indices], y_pred[poisoned_indices])
+    return 1 / (1 + fpr), poison_detection_accuracy  # Lower FPR and higher detection accuracy mean higher affinity
 
 # Step 4: Network Dynamics
-def update_network(network, X_train, y_train, num_clones, mutation_rate):
-    affinities = [calculate_affinity(classifier, X_train, y_train) for classifier in network]
+def update_network(network, X_train, y_train, num_clones, mutation_rate, poisoned_indices):
+    affinities = [calculate_affinity(classifier, X_train, y_train, poisoned_indices)[0] for classifier in network]
     sorted_indices = np.argsort(affinities)[::-1]
     top_classifiers = [network[i] for i in sorted_indices[:num_clones]]
     
@@ -58,11 +72,12 @@ def update_network(network, X_train, y_train, num_clones, mutation_rate):
     return new_network[:len(network)], edges
 
 # Step 5: Memory Update
-def memory_update(network, X_train, y_train, memory_size):
-    affinities = [calculate_affinity(classifier, X_train, y_train) for classifier in network]
+def memory_update(network, X_train, y_train, memory_size, poisoned_indices):
+    affinities = [calculate_affinity(classifier, X_train, y_train, poisoned_indices)[0] for classifier in network]
     sorted_indices = np.argsort(affinities)[::-1]
     memory = [network[i] for i in sorted_indices[:memory_size]]
     return memory
+
 
 # Step 6: Visualize Network
 def visualize_network(network, edges):
@@ -87,64 +102,35 @@ def plot_confusion_matrix(cm):
 
 # Main Function
 def main():
-    cipl = cicidspipeline()
-    poisoned_pipeline = cicids_poisoned_pipeline()
-    mixed_pipeline = cicids_mixed_pipeline()
-    X_train, y_train, X_test, y_test = cipl.cicids_data_binary()
-    print('dataset has been split into train and test data')
-    X_poisoned_train, y_poisoned_train, X_poisoned_test, y_poisoned_test = poisoned_pipeline.cicids_data_binary()
-    print('dataset has been split into poisoned train and test data')
-
-    X_mixed_train, y_mixed_train, X_mixed_test, y_mixed_test = mixed_pipeline.cicids_data_binary()
-    print('dataset has been split into mixed train and test data')
-
-
-
-    y_train[y_train == 0] = -1
-    y_test[y_test == 0] = -1
-
-    y_poisoned_train[y_poisoned_train == 0] = -1
-    y_poisoned_test[y_poisoned_test == 0] = -1
-
-    y_mixed_train[y_mixed_train == 0] = -1
-    y_mixed_test[y_mixed_test == 0] = -1
-
-
-    scaler = StandardScaler()
-
-
-
-    X_poisoned_train = scaler.fit_transform(X_poisoned_train)
-    X_poisoned_test = scaler.transform(X_poisoned_test)
-
-    X_mixed_train = scaler.fit_transform(X_mixed_train)
-    X_mixed_test = scaler.transform(X_mixed_test)
-
-    X_train = scaler.fit_transform(X_train)
-    X_test = scaler.transform(X_test)
-
+    X_train, y_train, X_test, y_test, poisoned_indices = generate_data()
     num_nodes = 10
-    num_clones = 10
+    num_clones = 5
     mutation_rate = 0.01
     memory_size = 10
     num_generations = 10
 
-    network = initialize_network(num_nodes, X_poisoned_train, y_poisoned_train)
+    network = initialize_network(num_nodes, X_train, y_train)
     all_edges = []
 
     for _ in range(num_generations):
-        network, edges = update_network(network,X_poisoned_train, y_poisoned_train, num_clones, mutation_rate)
+        network, edges = update_network(network, X_train, y_train, num_clones, mutation_rate, poisoned_indices)
         all_edges.extend(edges)
-        memory = memory_update(network, X_poisoned_train, y_poisoned_train, memory_size)
+        memory = memory_update(network, X_train, y_train, memory_size, poisoned_indices)
     
     best_classifier = memory[0]
-    y_pred = best_classifier.predict(X_mixed_test)
-    test_accuracy = accuracy_score(y_mixed_test, y_pred)
-    conf_matrix = confusion_matrix(y_mixed_test, y_pred)
+    y_pred = best_classifier.predict(X_test)
+    tn, fp, fn, tp = confusion_matrix(y_test, y_pred).ravel()
+    test_accuracy = accuracy_score(y_test, y_pred)
+    fpr = fp / (fp + tn) if (fp + tn) > 0 else 0
 
     print(f'Test Accuracy: {test_accuracy:.2f}')
+    print(f'False Positive Rate: {fpr:.2f}')
     print('Confusion Matrix:')
-    print(conf_matrix)
+    print(confusion_matrix(y_test, y_pred))
+    
+    # Evaluate poison detection accuracy
+    poison_detection_accuracy = accuracy_score(y_train[poisoned_indices], best_classifier.predict(X_train[poisoned_indices]))
+    print(f'Poison Detection Accuracy: {poison_detection_accuracy:.2f}')
     
     visualize_network(network, all_edges)
 
