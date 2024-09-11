@@ -3,6 +3,7 @@ from __future__ import print_function, division
 from builtins import range
 
 import pandas as pd
+from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import StandardScaler
 from datetime import datetime
 
@@ -99,33 +100,43 @@ def plot_decision_boundary(model, X, Y, resolution=100, colors=('b', 'k', 'r')):
 def runCICIDS(model):
 
     cipl = cicidspipeline()
-    poisoned_pipeline = cicids_poisoned_pipeline()
-    X_train, y_train, X_test, y_test = cipl.cicids_data_binary()
-    print('dataset has been split into train and test data')
-    X_poisoned_train, y_poisoned_train, X_poisoned_test, y_poisoned_test = poisoned_pipeline.cicids_data_binary()
-    print('dataset has been split into poisoned train and test data')
 
+    X_train, y_train, X_test, y_test = cipl.cicids_data_binary()
+    # Introduce poisoned data
+    num_poisoned = int(0.1 * len(X_train))  # 10% poisoned data
+    poisoned_indices = np.random.choice(len(X_train), num_poisoned, replace=False)
+    X_train[poisoned_indices] = np.random.rand(num_poisoned, 78)
+    y_train[poisoned_indices] = 1 - y_train[poisoned_indices]  # Flip the labels
+
+    # Step 1: Apply AIS for Anomaly Detection
+    # Use Isolation Forest as a simple AIS for anomaly detection
+    iso_forest = IsolationForest(contamination=0.1, random_state=42)
+    y_pred_outliers = iso_forest.fit_predict(X_train)
+
+    # Filter out detected anomalies
+    X_train_cleaned = X_train[y_pred_outliers == 1]
+    y_train_cleaned = y_train[y_pred_outliers == 1]
 
     y_train[y_train == 0] = -1
     y_test[y_test == 0] = -1
-
-    y_poisoned_train[y_poisoned_train == 0] = -1
-    y_poisoned_test[y_poisoned_test == 0] = -1
+    y_train_cleaned[y_train_cleaned == 0] = -1
     scaler = StandardScaler()
 
 
-    X_poisoned_train = scaler.fit_transform(X_poisoned_train)
-    X_poisoned_test = scaler.transform(X_poisoned_test)
+    # X_poisoned_train = scaler.fit_transform(X_poisoned_train)
+    # X_poisoned_test = scaler.transform(X_poisoned_test)
     X_train = scaler.fit_transform(X_train)
+    X_test = scaler.transform(X_test)
+    X_train_cleaned = scaler.fit_transform(X_train_cleaned)
     X_test = scaler.transform(X_test)
 
   # now we'll use our custom implementation
     model = otherLinearSVM(C=1.0)
 
     t0 = datetime.now()
-    model.fit(X_poisoned_train, y_poisoned_train, lr=1e-04, n_iters= 400)
+    model.fit(X_train_cleaned, y_train_cleaned, lr=1e-04, n_iters= 400)
     cm = cmSklearn(model, y_test, X_test)
-    trainAcc = model.score(X_poisoned_train, y_poisoned_train)
+    trainAcc = model.score(X_train_cleaned, y_train_cleaned)
     print("train score:", trainAcc,  "duration:", datetime.now() - t0)
     t0 = datetime.now()
     testAcc = model.score(X_test, y_test)
