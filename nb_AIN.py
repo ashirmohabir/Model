@@ -124,7 +124,7 @@ def main():
     # X_test = scaler.transform(X_test)
 
 
-    num_nodes = 100
+    num_nodes = 20
     num_clones = 15
     mutation_rate = 0.1
     memory_size = 100

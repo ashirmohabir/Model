@@ -87,7 +87,7 @@ def visualize_network(network, edges):
     
     pos = nx.spring_layout(G)
     nx.draw(G, pos, with_labels=True, node_size=700, node_color='skyblue', font_size=10, font_color='black', font_weight='bold')
-    plt.title('Artificial Immune Network of Naive Bayes Classifiers')
+    plt.title('Artificial Immune Network of SVM')
     plt.show()
 
 
@@ -140,7 +140,7 @@ def main():
     plot_confusion_matrix(conf_matrix)
 
     # Save the confusion matrix to a file
-    np.savetxt("ain_classification_data/nb_AIN_confusion_matrix.txt", conf_matrix, fmt='%d', delimiter=',')
+    np.savetxt("ain_classification_data/svm_AIN_confusion_matrix.txt", conf_matrix, fmt='%d', delimiter=',')
 
     # Create a DataFrame with the true and predicted labels
     results = pd.DataFrame({
@@ -149,11 +149,11 @@ def main():
     })
 
     # Save the DataFrame to a CSV file
-    results.to_csv("ain_classification_data/nb_AIN_predictions.csv", index=False)
+    results.to_csv("ain_classification_data/svm_AIN_predictions.csv", index=False)
 
     print(classification_report(y_test, y_pred, zero_division=0))
 
-    with open('ain_classification_data/nb_AIN_classification_report.txt', 'w') as f:
+    with open('ain_classification_data/svm_AIN_classification_report.txt', 'w') as f:
         f.write(classification_report(y_test, y_pred, zero_division=0))
 
     # Generate the classification report as a dictionary
@@ -163,11 +163,11 @@ def main():
     report_df = pd.DataFrame(report_dict).transpose()
 
     # Save the DataFrame to a CSV file
-    report_df.to_csv('ain_classification_data/nb_AIN_classification_report.csv')
+    report_df.to_csv('ain_classification_data/svm_AIN_classification_report.csv')
 
     ns_probs = [0 for _ in range(len(y_test))]
     P = np.nan_to_num(y_pred)
-    plt.title("ROC Curve for Naive bayes model")
+    plt.title("ROC Curve for SVM model")
     # calculate roc curves
     ns_fpr, ns_tpr, _ = roc_curve(y_test, ns_probs)
     lr_fpr, lr_tpr, _ = roc_curve(y_test, P)
