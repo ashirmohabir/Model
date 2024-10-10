@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import networkx as nx
-from sklearn.svm import SVC
+from sklearn.linear_model import SGDClassifier
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, roc_curve
 from sklearn.preprocessing import StandardScaler
 import random
@@ -28,7 +28,7 @@ def generate_data():
 
     return X_train, y_train, X_test, y_test, poisoned_indices
 
-# Step 2: Antibody Initialization with SVM
+# Step 2: Antibody Initialization with SGDClassifier
 def initialize_network(num_nodes, X_train, y_train):
     network = []
     scaler = StandardScaler()
@@ -36,7 +36,7 @@ def initialize_network(num_nodes, X_train, y_train):
     for _ in range(num_nodes):
         indices = np.random.choice(len(X_train_scaled), len(X_train_scaled), replace=True)
         X_sample, y_sample = X_train_scaled[indices], y_train[indices]
-        model = SVC(kernel='linear', probability=True)  # Linear SVM
+        model = SGDClassifier(loss='hinge', max_iter=1000, tol=1e-3)  # Linear SVM using SGD
         model.fit(X_sample, y_sample)
         network.append((model, scaler))  # Store model with scaler
     return network
@@ -63,7 +63,7 @@ def update_network(network, X_train, y_train, num_clones, mutation_rate, poisone
     for classifier in top_classifiers:
         model, scaler = classifier
         for _ in range(num_clones):
-            clone_model = SVC(kernel='linear', probability=True)
+            clone_model = SGDClassifier(loss='hinge', max_iter=1000, tol=1e-3)
             noise = mutation_rate * np.random.randn(*X_train.shape)
             X_train_mutated = scaler.transform(X_train + noise)
             clone_model.fit(X_train_mutated, y_train)
@@ -104,11 +104,12 @@ def visualize_network(network, edges):
 # Main Function
 def main():
     X_train, y_train, X_test, y_test, poisoned_indices = generate_data()
-    num_nodes = 10
-    num_clones = 5
-    mutation_rate = 0.01
+
+    num_nodes = 50
+    num_clones = 15
+    mutation_rate = 0.1
     memory_size = 10
-    num_generations = 10
+    num_generations = 30
 
     network = initialize_network(num_nodes, X_train, y_train)
     all_edges = []
@@ -176,7 +177,7 @@ def main():
     lr_fpr, lr_tpr, _ = roc_curve(y_test, P)
     # plot the roc curve for the model
     plt.plot(ns_fpr, ns_tpr, linestyle='--', label='No Skill')
-    plt.plot(lr_fpr, lr_tpr, marker='.', label='SVM')
+    plt.plot(lr_fpr, lr_tpr, marker='.', label='SGDClassifier')
     # axis labels
     plt.xlabel('False Positive Rate')
     plt.ylabel('True Positive Rate')
