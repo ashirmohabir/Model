@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import networkx as nx
-from sklearn.naive_bayes import GaussianNB
+from sklearn.linear_model import SGDClassifier
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, roc_curve, auc
 
@@ -35,14 +35,14 @@ def normalize_data(X_train, X_test, X_poisoned):
     return X_train_scaled, X_test_scaled, X_poisoned_scaled, scaler
 
 
-# **Step 3: Train the Naive Bayes Model**
+# **Step 3: Train the SGDClassifier**
 def train_model(X_train, y_train):
-    model = GaussianNB()
+    model = SGDClassifier(loss="hinge", max_iter=1000, tol=1e-3)
     model.fit(X_train, y_train)
     return model
 
 
-# **Step 4: Train the Artificial Immune Network (AIN) Using Naive Bayes**
+# **Step 4: Train the Artificial Immune Network (AIN)**
 def train_ain(X_poisoned, y_poisoned, num_nodes=5):
     network = []
     
@@ -50,7 +50,7 @@ def train_ain(X_poisoned, y_poisoned, num_nodes=5):
         sample_indices = np.random.choice(len(X_poisoned), len(X_poisoned), replace=True)
         X_sample, y_sample = X_poisoned[sample_indices], y_poisoned[sample_indices]
         
-        model = GaussianNB()
+        model = SGDClassifier(loss="hinge", max_iter=500, tol=1e-3)
         model.fit(X_sample, y_sample)
         
         network.append(model)
@@ -63,9 +63,9 @@ def update_ain(network, X_poisoned, y_poisoned, mutation_rate=0.01):
     updated_network = []
 
     for model in network:
-        clone = GaussianNB()
+        clone = SGDClassifier(loss="hinge", max_iter=500, tol=1e-3)
         mutation_noise = mutation_rate * np.random.randn(*X_poisoned.shape)
-        X_mutated = X_poisoned + mutation_noise  # Introduce mutation
+        X_mutated = X_poisoned + mutation_noise
         
         clone.fit(X_mutated, y_poisoned)
         updated_network.append(clone)
@@ -74,28 +74,28 @@ def update_ain(network, X_poisoned, y_poisoned, mutation_rate=0.01):
 
 
 # **Step 6: Test the Model and AIN**
-def evaluate_models(nb_model, ain_network, X_test, y_test, X_poisoned, y_poisoned):
-    y_pred_nb = nb_model.predict(X_test)
-    test_accuracy = accuracy_score(y_test, y_pred_nb)
-    print(f"✅ **Naive Bayes Test Accuracy:** {test_accuracy:.2f}")
+def evaluate_models(sgd_model, ain_network, X_test, y_test, X_poisoned, y_poisoned):
+    y_pred_sgd = sgd_model.predict(X_test)
+    test_accuracy = accuracy_score(y_test, y_pred_sgd)
+    print(f"✅ **SGDClassifier Test Accuracy:** {test_accuracy:.2f}")
 
     # **AIN Poison Detection Accuracy**
     ain_predictions = np.mean([model.predict(X_poisoned) for model in ain_network], axis=0) > 0.5
     poison_accuracy = accuracy_score(y_poisoned, ain_predictions)
     print(f"🚨 **AIN Poison Detection Accuracy:** {poison_accuracy:.2f}")
 
-    return y_pred_nb, ain_predictions
+    return y_pred_sgd, ain_predictions
 
 
 # **Step 7: ROC Curve and Performance Metrics**
-def visualize_results(nb_model, ain_network, scaler, X_test, y_test, y_pred_nb, X_poisoned, y_poisoned, ain_predictions):
+def visualize_results(model, ain_network, scaler, X_test, y_test, y_pred_sgd, X_poisoned, y_poisoned, ain_predictions):
     # **Confusion Matrices**
-    conf_matrix_nb = confusion_matrix(y_test, y_pred_nb)
+    conf_matrix_sgd = confusion_matrix(y_test, y_pred_sgd)
     conf_matrix_ain = confusion_matrix(y_poisoned, ain_predictions)
 
     plt.figure(figsize=(8, 6))
-    sns.heatmap(conf_matrix_nb, annot=True, cmap="Blues", fmt="d")
-    plt.title("Naive Bayes - Confusion Matrix (Clean Data)")
+    sns.heatmap(conf_matrix_sgd, annot=True, cmap="Blues", fmt="d")
+    plt.title("SGDClassifier - Confusion Matrix (Clean Data)")
     plt.xlabel("Predicted")
     plt.ylabel("Actual")
     plt.show()
@@ -109,16 +109,16 @@ def visualize_results(nb_model, ain_network, scaler, X_test, y_test, y_pred_nb, 
 
     # **ROC Curve for Clean and Poisoned Data**
     X_test_scaled = scaler.transform(X_test)
-    y_scores_nb = nb_model.predict_proba(X_test_scaled)[:, 1]  # Get probabilities
+    y_scores_sgd = model.decision_function(X_test_scaled)
 
     X_poisoned_scaled = scaler.transform(X_poisoned)
-    y_scores_ain = np.mean([model.predict_proba(X_poisoned_scaled)[:, 1] for model in ain_network], axis=0)
+    y_scores_ain = np.mean([model.decision_function(X_poisoned_scaled) for model in ain_network], axis=0)
 
-    fpr_nb, tpr_nb, _ = roc_curve(y_test, y_scores_nb)
+    fpr_sgd, tpr_sgd, _ = roc_curve(y_test, y_scores_sgd)
     fpr_ain, tpr_ain, _ = roc_curve(y_poisoned, y_scores_ain)
 
     plt.figure(figsize=(8, 6))
-    plt.plot(fpr_nb, tpr_nb, label="Naive Bayes (Clean Data)", color="blue")
+    plt.plot(fpr_sgd, tpr_sgd, label="SGDClassifier (Clean Data)", color="blue")
     plt.plot(fpr_ain, tpr_ain, label="AIN (Poisoned Data)", color="red", linestyle="dashed")
     plt.plot([0, 1], [0, 1], linestyle="--", color="black")
     plt.xlabel("False Positive Rate")
@@ -128,8 +128,8 @@ def visualize_results(nb_model, ain_network, scaler, X_test, y_test, y_pred_nb, 
     plt.show()
 
     # **Performance Metrics**
-    print("\n🔍 **Naive Bayes Performance (Clean Data):**")
-    print(classification_report(y_test, y_pred_nb))
+    print("\n🔍 **SGDClassifier Performance (Clean Data):**")
+    print(classification_report(y_test, y_pred_sgd))
 
     print("\n🛡 **AIN Performance (Poisoned Data):**")
     print(classification_report(y_poisoned, ain_predictions))
@@ -144,17 +144,17 @@ def main():
     X_train_scaled, X_test_scaled, X_poisoned_scaled, scaler = normalize_data(X_train, X_test, X_poisoned)
 
     # **Train Models**
-    nb_model = train_model(X_train_scaled, y_train)
+    sgd_model = train_model(X_train_scaled, y_train)
     ain_network = train_ain(X_poisoned_scaled, y_poisoned)
 
     # **Update AIN**
     ain_network = update_ain(ain_network, X_poisoned_scaled, y_poisoned)
 
     # **Evaluate Models**
-    y_pred_nb, ain_predictions = evaluate_models(nb_model, ain_network, X_test_scaled, y_test, X_poisoned_scaled, y_poisoned)
+    y_pred_sgd, ain_predictions = evaluate_models(sgd_model, ain_network, X_test_scaled, y_test, X_poisoned_scaled, y_poisoned)
 
-    # **Visualize Results**
-    visualize_results(nb_model, ain_network, scaler, X_test, y_test, y_pred_nb, X_poisoned, y_poisoned, ain_predictions)
+    # **Pass `ain_network` to Visualize Results**
+    visualize_results(sgd_model, ain_network, scaler, X_test, y_test, y_pred_sgd, X_poisoned, y_poisoned, ain_predictions)
 
 
 # **Run the Full Pipeline**
